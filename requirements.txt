@@ -1,7 +1,8 @@
-streamlit 
+streamlit
 python-dotenv
 langchain-community
-langhain-groq
+langchain-groq
+PyPDF2
 
 
 
