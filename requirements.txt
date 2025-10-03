@@ -1,11 +1,8 @@
 streamlit
 python-dotenv
-langchain-community
-langchain-groq
 PyPDF2
-
-
-
-
-
-
+faiss-cpu
+langchain
+sentence-transformers
+langchain-groq
+huggingface-hub
