@@ -2,6 +2,10 @@ from dotenv import load_dotenv
 import os
 import streamlit as st
 from langchain_groq import ChatGroq
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.schema import Document
 
 # Load env variables
 load_dotenv()
@@ -58,8 +62,10 @@ llm = ChatGroq(
 
 # File upload
 uploaded_file = st.file_uploader("📂 Upload a TXT or PDF file", type=["txt", "pdf"])
-file_content = ""
+retriever = None
+
 if uploaded_file:
+    file_content = ""
     if uploaded_file.type == "text/plain":
         file_content = uploaded_file.read().decode("utf-8")
     elif uploaded_file.type == "application/pdf":
@@ -70,6 +76,19 @@ if uploaded_file:
         except Exception as e:
             st.error("Error reading PDF: " + str(e))
 
+    if file_content:
+        # Split text into chunks
+        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = splitter.split_text(file_content)
+
+        # Convert into LangChain docs
+        docs = [Document(page_content=chunk) for chunk in chunks]
+
+        # Embeddings + FAISS
+        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        vectorstore = FAISS.from_documents(docs, embeddings)
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+
 # Input box
 user_prompt = st.chat_input("Ask Chatbot...")
 
@@ -77,11 +96,16 @@ if user_prompt:
     st.chat_message("user").markdown(user_prompt)
     st.session_state.chat_history.append({"role": "user", "content": user_prompt})
 
-    # Add file content if uploaded
+    # System prompt
     system_prompt = "You are a helpful assistant."
-    if file_content:
-        system_prompt += f"\nHere is some file content the user uploaded:\n{file_content[:2000]}"
 
+    # If retriever available, fetch context from file
+    if retriever:
+        retrieved_docs = retriever.get_relevant_documents(user_prompt)
+        context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+        system_prompt += f"\nUse this context from the uploaded file to help answer:\n{context}"
+
+    # Model call
     response = llm.invoke(
         input=[{"role": "system", "content": system_prompt},
                *st.session_state.chat_history]
