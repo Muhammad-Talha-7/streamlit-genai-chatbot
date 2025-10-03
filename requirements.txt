@@ -2,7 +2,7 @@ streamlit
 python-dotenv
 PyPDF2
 faiss-cpu
-langchain==0.1.123
+langchain
 sentence-transformers
 langchain-groq
 huggingface-hub
