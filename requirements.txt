@@ -3,6 +3,7 @@ python-dotenv
 PyPDF2
 faiss-cpu
 langchain==0.2.17
+langchain-community
 sentence-transformers
 langchain-groq
 huggingface-hub
